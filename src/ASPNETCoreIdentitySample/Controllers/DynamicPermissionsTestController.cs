@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel;
 using ASPNETCoreIdentitySample.ViewModels.Identity;
+using ASPNETCoreIdentitySample.Common.WebToolkit;
 
 namespace ASPNETCoreIdentitySample.Controllers
 {
@@ -13,6 +14,7 @@ namespace ASPNETCoreIdentitySample.Controllers
     [Authorize(Policy = ConstantPolicies.DynamicPermission)]
     [BreadCrumb(UseDefaultRouteUrl = true, Order = 0)]
     [DisplayName("کنترلر آزمایشی با سطح دسترسی پویا")]
+    // [NoBrowserCache]
     public class DynamicPermissionsTestController : Controller
     {
         [DisplayName("ایندکس")]
@@ -22,7 +24,7 @@ namespace ASPNETCoreIdentitySample.Controllers
             return View();
         }
 
-        [HttpPost]
+        [HttpPost] // More info: http://www.dotnettips.info/post/2468/ and http://www.dotnettips.info/post/2470/
         public IActionResult Index([FromBody]RoleViewModel model)
         {
             return Json(model);

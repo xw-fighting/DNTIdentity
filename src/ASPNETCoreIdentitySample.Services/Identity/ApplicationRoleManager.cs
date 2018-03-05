@@ -40,7 +40,7 @@ namespace ASPNETCoreIdentitySample.Services.Identity
             ILogger<ApplicationRoleManager> logger,
             IHttpContextAccessor contextAccessor,
             IUnitOfWork uow) :
-            base((RoleStore<Role, ApplicationDbContext, int, UserRole, RoleClaim>)store, roleValidators, keyNormalizer, errors, logger, contextAccessor)
+            base((RoleStore<Role, ApplicationDbContext, int, UserRole, RoleClaim>)store, roleValidators, keyNormalizer, errors, logger)
         {
             _store = store;
             _store.CheckArgumentIsNull(nameof(_store));
@@ -138,10 +138,10 @@ namespace ASPNETCoreIdentitySample.Services.Identity
             {
                 Paging =
                 {
-                    TotalItems = await query.CountAsync().ConfigureAwait(false)
+                    TotalItems = await query.CountAsync()
                 },
-                Users = await query.Skip(skipRecords).Take(recordsPerPage).ToListAsync().ConfigureAwait(false),
-                Roles = await Roles.ToListAsync().ConfigureAwait(false)
+                Users = await query.Skip(skipRecords).Take(recordsPerPage).ToListAsync(),
+                Roles = await Roles.ToListAsync()
             };
         }
 
@@ -207,7 +207,7 @@ namespace ASPNETCoreIdentitySample.Services.Identity
             string roleClaimType,
             IList<string> selectedRoleClaimValues)
         {
-            var role = await FindRoleIncludeRoleClaimsAsync(roleId).ConfigureAwait(false);
+            var role = await FindRoleIncludeRoleClaimsAsync(roleId);
             if (role == null)
             {
                 return IdentityResult.Failed(new IdentityError
@@ -221,6 +221,10 @@ namespace ASPNETCoreIdentitySample.Services.Identity
                                                     .Select(roleClaim => roleClaim.ClaimValue)
                                                     .ToList();
 
+            if (selectedRoleClaimValues == null)
+            {
+                selectedRoleClaimValues = new List<string>();
+            }
             var newClaimValuesToAdd = selectedRoleClaimValues.Except(currentRoleClaimValues).ToList();
             foreach (var claimValue in newClaimValuesToAdd)
             {
@@ -243,7 +247,7 @@ namespace ASPNETCoreIdentitySample.Services.Identity
                 }
             }
 
-            return await UpdateAsync(role).ConfigureAwait(false);
+            return await UpdateAsync(role);
         }
 
         private int getCurrentUserId() => _contextAccessor.HttpContext.User.Identity.GetUserId<int>();

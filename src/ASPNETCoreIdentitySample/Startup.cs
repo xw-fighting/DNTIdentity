@@ -1,9 +1,7 @@
 ﻿using ASPNETCoreIdentitySample.Common.GuardToolkit;
 using ASPNETCoreIdentitySample.Common.PersianToolkit;
 using ASPNETCoreIdentitySample.Common.WebToolkit;
-using ASPNETCoreIdentitySample.DataLayer.Context;
 using ASPNETCoreIdentitySample.Services.Identity.Logger;
-using ASPNETCoreIdentitySample.Services.Identity;
 using ASPNETCoreIdentitySample.ViewModels.Identity.Settings;
 using DNTCaptcha.Core;
 using Microsoft.AspNetCore.Builder;
@@ -12,42 +10,43 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 using System.IO;
+using ASPNETCoreIdentitySample.IocConfig;
+using ASPNETCoreIdentitySample.DataLayer.Context;
+using ASPNETCoreIdentitySample.Services.Identity;
+using Microsoft.AspNetCore.Rewrite;
 
 namespace ASPNETCoreIdentitySample
 {
     public class Startup
     {
-        public IConfigurationRoot Configuration { set; get; }
-
-        public Startup(IHostingEnvironment env)
+        public Startup(IConfiguration configuration)
         {
-            var builder = new ConfigurationBuilder()
-                                .SetBasePath(env.ContentRootPath)
-                                .AddInMemoryCollection(new[]
-                                {
-                                    new KeyValuePair<string,string>("the-key", "the-value")
-                                })
-                                .AddJsonFile("appsettings.json", reloadOnChange: true, optional: false)
-                                .AddJsonFile($"appsettings.{env}.json", optional: true)
-                                .AddEnvironmentVariables();
-            Configuration = builder.Build();
+            Configuration = configuration;
         }
+
+        public IConfiguration Configuration { get; }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IConfigurationRoot>(provider => { return Configuration; });
             services.Configure<SiteSettings>(options => Configuration.Bind(options));
-
-            services.AddDbContext<ApplicationDbContext>(ServiceLifetime.Scoped);
 
             // Adds all of the ASP.NET Core Identity related services and configurations at once.
             services.AddCustomIdentityServices();
 
+            var siteSettings = services.GetSiteSettings();
+            services.AddRequiredEfInternalServices(siteSettings); // It's added to access services from the dbcontext, remove it if you are using the normal `AddDbContext` and normal constructor dependency injection.
+            services.AddDbContextPool<ApplicationDbContext>((serviceProvider, optionsBuilder) =>
+            {
+                optionsBuilder.SetDbContextOptions(siteSettings);
+                optionsBuilder.UseInternalServiceProvider(serviceProvider); // It's added to access services from the dbcontext, remove it if you are using the normal `AddDbContext` and normal constructor dependency injection.
+            });
+
             services.AddMvc(options =>
             {
                 options.UseCustomStringModelBinder();
+                options.AllowEmptyInputInBodyModelBinding = true;
+                // options.Filters.Add(new NoBrowserCacheAttribute());
             }).AddJsonOptions(jsonOptions =>
             {
                 jsonOptions.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
@@ -85,6 +84,8 @@ namespace ASPNETCoreIdentitySample
 
             // Adds all of the ASP.NET Core Identity related initializations at once.
             app.UseCustomIdentityServices();
+
+            // app.UseNoBrowserCache();
 
             app.UseMvc(routes =>
             {

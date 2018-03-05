@@ -13,6 +13,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System;
+using Microsoft.AspNetCore.Hosting.Internal;
+using ASPNETCoreIdentitySample.IocConfig;
 
 namespace ASPNETCoreIdentitySample.MsTests
 {
@@ -28,6 +30,7 @@ namespace ASPNETCoreIdentitySample.MsTests
         public CoreTests()
         {
             var services = new ServiceCollection();
+            services.AddOptions();
             services.AddScoped<IHostingEnvironment, HostingEnvironment>();
 
             var configuration = new ConfigurationBuilder()
